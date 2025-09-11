@@ -4,6 +4,15 @@
 pragma solidity 0.8.30;
 
 contract SmartSub {
+       // ---- Reentrancy-guard ----
+    uint256 private _locked = 1;
+    modifier nonReentrant() {
+        require(_locked == 1, "Reentrant call");
+        _locked = 2;
+        _;
+        _locked = 1;
+    }
+    
     address public owner;
     
     enum subStatus { Active, Paused }
