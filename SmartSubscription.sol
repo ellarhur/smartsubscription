@@ -12,9 +12,10 @@ contract SmartSub {
         _;
         _locked = 1;
     }
-    
+
     address public owner;
     
+    // ---- Struct & Enums ----
     enum subStatus { Active, Paused }
 
     struct Sub {
@@ -32,15 +33,6 @@ contract SmartSub {
     constructor() {
         owner = msg.sender;
         eventCounter = 0;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function");
-        _;
-    }
-
-    function paySub(address _subscriber, uint256 _fee) public {
-        require(subs[_subscriber].owner != address(0), "Subscriber not registered");
     }
 }
 
