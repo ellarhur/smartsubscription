@@ -1,14 +1,12 @@
 // The Smart Contact for my subscription service
-
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
 contract SmartSub {
       address public owner;
     
-    // Struct & Enums
+// Struct & Enums
     enum SubscriptionStatus { Active, Paused }
-
     struct Subscription {
         uint256 subscriptionId;
         string title;
@@ -18,14 +16,13 @@ contract SmartSub {
         SubscriptionStatus status;
         bool paused;
     }
-
     struct Subscriber {
         uint256 subscriberId;
         address subscriberAddress;
         uint256 balance;
     }
 
-      // State variables
+// State variables
     address public ownerAddress; // Saves the owner address on the blockchain
     uint256 public nextSubscriptionId; // Makes an ID available for the next created subscription
     uint256 public nextSubscriberId; // Makes an ID available for the next created subscriber
@@ -43,7 +40,7 @@ contract SmartSub {
     event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
     event RevenueWithdrawn(uint256 indexed serviceId, address indexed owner, uint256 amount);
 
-   //  Modifiers
+// Modifiers
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the contract owner can do this.");
         _;
@@ -69,7 +66,7 @@ contract SmartSub {
         _;
     }
 
-     // Constructor
+// Constructor
     constructor() {
     owner = msg.sender;
     nextSubscriberId = 0;
@@ -77,50 +74,41 @@ contract SmartSub {
     }
 
 
-    function createSub(string memory subTitle, uint256 subFee, uint256 cycleLength, subStatus status) public {
-    require(cycleLength > 0, "You have to set a period for the subscription"); // Make sure the owner sets a period
-    uint256 subscriptionId = subscriptionCounter++;
-    subscriptions[subscriptionId] = Subscription({
-        owner: msg.sender,
-        title: subTitle,
-        fee: subFee,
-        cycleLength: daysBetween * 1 days, // gör om dagar till sekunder
-        status: status,
-        startDate: block.timestamp,
-        endDate: block.timestamp + cycleLength,
-        balance: 0,
-        paused: false
-    });
+    function createSub(string memory title, uint256 fee, uint256 cycleLength, subStatus status) public {
+        require(bytes(name).length > 0, "You have to give the service subscription a name or title.");
+
+        uint256 subscriptionId = nextSubscriptionId++;
+           subscriptions[subscriptionId] = Subscription({
+            owner: msg.sender,
+            fee: fee,
+            cycleLength: cycleLength,
+            status: SubscriptionStatus.Active,
+            totalRevenue: 0,
+            name: name
+        });
+
+        subscribers[msg.sender].push(subscriptionId);
+        emit SubCreated(subscriptionId, msg.sender, title, fee, cycleLength);
+        return subscriptionId;
     }
 
-
-
-
-// function paySub(address _subscriber, uint256 _fee) public nonReentrant { 
-
-
-// function extendSub(address _subscriber) public nonReentrant {
-
-
-// function isActive(address _subscriber) public view returns (bool) {
-
-
-// function getEndDate(address _subscriber) public view returns (uint256) {
-
-
-// // function giveawaySub(address _subscriber) public nonReentrant {
-
-// function changeFee(uint256 _fee) public nonReentrant {
-
-
-// function pauseSub(address _subscriber) public nonReentrant {
-
-
-// function resumeSub(address _subscriber) public nonReentrant {
-
-
-// function collectRevenue() public nonReentrant {
-
-
+    function subscribe(uint256 subscriptionId) external 
+        payable 
+        subExists(subscriptionId) 
+        subActive(subscriptionId)  {
+        Subscription storage subscription = subscriptions[subscriptionId];
+        require(msg.value >= service.fee, "You don't have enough ETH to subscribe unfortunatly.");
+        
+        // Check if subscriber already hav an active subscription
+        uint256 existingSubId = subscriberSubscriptions[msg.sender][subscriptionId];
+        if (existingSubId > 0 && subscriptions[existingSubId].isActive) {
+            // Message that they already have an active subscription
+            revert("You already are subscribed to this subscription!")
+        } else {
+            // Otherwise create the new subscription
+            createNewSubscription(subscriptionId, msg.sender);
+        }
+ 
+    }
 
 }
