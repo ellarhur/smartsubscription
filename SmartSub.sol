@@ -30,6 +30,7 @@ contract SmartSub {
     mapping(uint256 => Subscription) public subscriptions;
     mapping(address => uint256[]) public subscribers;
     mapping(string => uint256) public titleToSubscriptionId; // Mapping från titel till ID
+    mapping(address => mapping(uint256 => bool)) public userSubscriptions; // Spåra vilka användare som prenumererar på vad
  
 
 // Events
@@ -73,6 +74,9 @@ contract SmartSub {
     }
 
 
+ // -- FUNCTIONS FOR OWNERS -- //  
+
+// Function for owners to create a new subscription service
     function createSub(string memory title, uint256 fee, uint256 cycleLength) public returns(uint256) {
         require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
         require(titleToSubscriptionId[title] == 0, "A subscription with this title already exists.");
@@ -94,29 +98,77 @@ contract SmartSub {
         return subscriptionId;
     }
 
-    // Prenumerera med titel istället för ID - mycket mer användarvänligt!
-    function subscribeByTitle(string memory title) external payable {
-        uint256 subscriptionId = titleToSubscriptionId[title];
-        require(subscriptionId != 0, "No subscription found with this title.");
-        require(subscriptions[subscriptionId].status == SubscriptionStatus.Active, "This subscription is not active.");
+// Function for owners to manage their subscription service
+    function manageSub(uint256 subscriptionId, uint256 newFee, SubscriptionStatus newStatus) public onlySubOwner(subscriptionId) {
+        require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
         
         Subscription storage subscription = subscriptions[subscriptionId];
-        require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
+        subscription.fee = newFee;
+        subscription.status = newStatus;
         
-        // Transfer payment to subscription owner
-        payable(subscription.ownerAddress).transfer(msg.value);
+        emit SubUpdated(subscriptionId, newFee);
+        emit SubStatusChanged(subscriptionId, newStatus);
     }
 
-    // Behåll den gamla funktionen för bakåtkompatibilitet
+// Function for owners to withdraw the revenue
+function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
+    require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
+    Subscription storage subscription = subscriptions[subscriptionId];
+    uint256 revenue = subscription.balance;
+    require(revenue > 0, "No revenue to withdraw.");
+    subscription.balance = 0;
+    payable(subscription.ownerAddress).transfer(revenue);
+    emit RevenueWithdrawn(subscriptionId, subscription.ownerAddress, revenue);
+
+
+ // -- FUNCTIONS FOR SUBSCRIBERS -- //  
+
+// Function for subscribers to start subscribing by ID
     function subscribe(uint256 subscriptionId) external 
         payable 
         subExists(subscriptionId) 
         subActive(subscriptionId)  {
         Subscription storage subscription = subscriptions[subscriptionId];
         require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
+        require(!userSubscriptions[msg.sender][subscriptionId], "You are already subscribed to this service.");
         
-        // Transfer payment to subscription owner
+        userSubscriptions[msg.sender][subscriptionId] = true; // Markera användaren som prenumerant
+        payable(subscription.ownerAddress).transfer(msg.value);
+    }
+    
+// Function for subscribers to start subscribing by title
+    function subscribeByTitle(string memory title) external payable {
+        uint256 subscriptionId = titleToSubscriptionId[title];
+        require(subscriptionId != 0, "No subscription found with this title.");
+        require(subscriptions[subscriptionId].status == SubscriptionStatus.Active, "This subscription is not active.");
+        require(!userSubscriptions[msg.sender][subscriptionId], "You are already subscribed to this service.");
+        
+        Subscription storage subscription = subscriptions[subscriptionId];
+        require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
+        
+        userSubscriptions[msg.sender][subscriptionId] = true; // Markera användaren som prenumerant
         payable(subscription.ownerAddress).transfer(msg.value);
     }
 
+// Function for subscribers to be able to pause their subscription by the ID
+    function pauseSub(uint256 subscriptionId) public {
+        require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
+        require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
+        
+        userSubscriptions[msg.sender][subscriptionId] = false; // Ta bort prenumerationen
+    }
+
+// Function for subscribers to be able to pause their subscription by putting in the title
+    function pauseSubByTitle(string memory title) public {
+        uint256 subscriptionId = titleToSubscriptionId[title];
+        require(subscriptionId != 0, "No subscription found with this title.");
+        require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
+        
+        userSubscriptions[msg.sender][subscriptionId] = false; // Ta bort prenumerationen
+    }
+
+// Function for subscribers to be able to give away their subscription 
+function giveawaySub(uint256 subscriptionId, address to) public {
+    require(subscriptionId < nextSubscriptionId, "This subscription doesn't exist.");
+    
 }
