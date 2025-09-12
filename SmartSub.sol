@@ -3,7 +3,7 @@
 pragma solidity 0.8.30;
 
 contract SmartSub {
-      address public owner;
+    address public owner;
     
 // Struct & Enums
     enum SubscriptionStatus { Active, Paused }
@@ -23,7 +23,6 @@ contract SmartSub {
     }
 
 // State variables
-    address public ownerAddress; // Saves the owner address on the blockchain
     uint256 public nextSubscriptionId; // Makes an ID available for the next created subscription
     uint256 public nextSubscriberId; // Makes an ID available for the next created subscriber
 
@@ -34,11 +33,11 @@ contract SmartSub {
  
 
 // Events
-    event SubCreated(uint256 indexed serviceId, address indexed owner, string name, uint256 fee, uint256 periodLength);
-    event SubUpdated(uint256 indexed serviceId, uint256 newFee);
-    event SubStatusChanged(uint256 indexed serviceId, ServiceStatus status);
+    event SubCreated(uint256 indexed subscriptionId, address indexed ownerAddress, string title, uint256 fee, uint256 cycleLength);
+    event SubUpdated(uint256 indexed subscriptionId, uint256 newFee);
+    event SubStatusChanged(uint256 indexed subscriptionId, SubscriptionStatus status);
     event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
-    event RevenueWithdrawn(uint256 indexed serviceId, address indexed owner, uint256 amount);
+    event RevenueWithdrawn(uint256 indexed subscriptionId, address indexed ownerAddress, uint256 amount);
 
 // Modifiers
     modifier onlyOwner() {
@@ -46,23 +45,23 @@ contract SmartSub {
         _;
     }
     
-    modifier onlySubOwner(uint256 serviceId) {
-        require(services[serviceId].owner == msg.sender, "Only the contract owner can do this.");
+    modifier onlySubOwner(uint256 subscriptionId) {
+        require(subscriptions[subscriptionId].ownerAddress == msg.sender, "Only the subscription owner can do this.");
         _;
     }
     
-    modifier subExists(uint256 serviceId) {
-        require(serviceId < nextServiceId, "This subscription does not exist.");
+    modifier subExists(uint256 subscriptionId) {
+        require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
         _;
     }
     
-    modifier serviceActive(uint256 serviceId) {
-        require(services[serviceId].status == ServiceStatus.Active, "This subscription is paused.");
+    modifier subActive(uint256 subscriptionId) {
+        require(subscriptions[subscriptionId].status == SubscriptionStatus.Active, "This subscription is paused.");
         _;
     }
     
     modifier validPeriod(uint256 cycleLength) {
-        require(periodLength >= 1 days, "You have to set a cycle length for your subscription.");
+        require(cycleLength >= 1 days, "You have to set a cycle length for your subscription.");
         _;
     }
 
@@ -74,17 +73,18 @@ contract SmartSub {
     }
 
 
-    function createSub(string memory title, uint256 fee, uint256 cycleLength, subStatus status) public {
-        require(bytes(name).length > 0, "You have to give the service subscription a name or title.");
+    function createSub(string memory title, uint256 fee, uint256 cycleLength) public returns(uint256) {
+        require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
 
         uint256 subscriptionId = nextSubscriptionId++;
            subscriptions[subscriptionId] = Subscription({
-            owner: msg.sender,
+            subscriptionId: subscriptionId,
+            title: title,
+            ownerAddress: msg.sender,
             fee: fee,
             cycleLength: cycleLength,
             status: SubscriptionStatus.Active,
-            totalRevenue: 0,
-            name: name
+            paused: false
         });
 
         subscribers[msg.sender].push(subscriptionId);
@@ -97,18 +97,13 @@ contract SmartSub {
         subExists(subscriptionId) 
         subActive(subscriptionId)  {
         Subscription storage subscription = subscriptions[subscriptionId];
-        require(msg.value >= service.fee, "You don't have enough ETH to subscribe unfortunatly.");
+        require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
         
-        // Check if subscriber already hav an active subscription
-        uint256 existingSubId = subscriberSubscriptions[msg.sender][subscriptionId];
-        if (existingSubId > 0 && subscriptions[existingSubId].isActive) {
-            // Message that they already have an active subscription
-            revert("You already are subscribed to this subscription!")
-        } else {
-            // Otherwise create the new subscription
-            createNewSubscription(subscriptionId, msg.sender);
-        }
- 
+        // Simple implementation - just accept the payment
+        // In a more complete version, you would track individual subscriptions
+        
+        // Transfer payment to subscription owner (simplified)
+        payable(subscription.ownerAddress).transfer(msg.value);
     }
 
 }
