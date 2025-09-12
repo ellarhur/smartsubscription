@@ -4,7 +4,7 @@
 pragma solidity 0.8.30;
 
 contract SmartSub {
-       // ---- Reentrancy-guard ----
+       // Reentrancy-guard
     uint256 private _locked = 1;
     modifier nonReentrant() {
         require(_locked == 1, "Reentrant call");
@@ -15,7 +15,7 @@ contract SmartSub {
 
     address public owner;
     
-    // ---- Struct & Enums ----
+    // Struct & Enums
     enum subStatus { Active, Paused }
 
     struct Sub {
@@ -30,6 +30,7 @@ contract SmartSub {
     mapping(address => bool) public isRegistered;
     uint256 public eventCounter;
 
+    // Constructor
     constructor() {
         owner = msg.sender;
         eventCounter = 0;

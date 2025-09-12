@@ -7,14 +7,15 @@ The contract should have functions to pay for or extend a subscription, check if
 The creator of a subscription service should be able to change the fee for the subscription, pause or resume their particular service, and collect the revenue that has been collected for the current subscription.</p>
 
 <b>Min planerade logik i nuläget: (In swedish)</b>
-<p>
-- pragma
-- contract SmartSub - öppna med namnet på kontraktet
-- enum SubStatus { Active, Paused 
-- struct för datatyperna vi kommer behöva: address owner; uint256 fee; uint256 periodLength; - bool paused; uint256 balance;
-- mappings på Event (events) och om en deltagare är registrerad (isRegistered)
-- Constructor (för vad?) kanske owner = msg.sender, samt eventCounter ska vara 0 från början.
-- funktioner: paySub, extendSub, isActive, getEndDate, giveawaySub
-- custom modifiers: bara skaparen av prenumerationstjänsten ska kunna ändra avgiften för prenumerationen, pausa eller återuppta sin tjänst, ta ut intäkter som samlats in av aktuella prenumerationen.
-- Events: prenumeration har skapats, användare har prenumererat, användare har pausat, pengar har tagits emot ?
-- TESTER.</p>
+<ul>
+<li>pragma</li>
+<li>contract SmartSub - öppna med namnet på kontraktet</li>
+<li>enum SubStatus { Active, Paused }</li>
+<li>struct för datatyperna vi kommer behöva: address owner; uint256 fee; uint256 periodLength; - bool paused; uint256 balance;</li>
+<li>mappings på Event (events) och om en deltagare är registrerad (isRegistered)</li>
+<li>Constructor (för vad?) kanske owner = msg.sender, samt eventCounter ska vara 0 från början.</li>
+<li>funktioner: paySub, extendSub, isActive, getEndDate, giveawaySub</li>
+<li>custom modifiers: bara skaparen av prenumerationstjänsten ska kunna ändra avgiften för prenumerationen, pausa eller återuppta sin tjänst, ta ut intäkter som samlats in av aktuella prenumerationen.</li>
+<li>Events: prenumeration har skapats, användare har prenumererat, användare har pausat, pengar har tagits emot ?</li>
+<li>TESTER.</li>
+</ul>
