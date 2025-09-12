@@ -18,15 +18,31 @@ contract SmartSub {
     // Struct & Enums
     enum subStatus { Active, Paused }
 
-    struct Sub {
-        address owner;
+    struct Subscription {
+        uint256 subscriptionId;
+        string title;
+        address ownerAddress;
         uint256 fee;
         uint256 periodLength;
-        bool paused;
+        subStatus status;
+        uint256 startDate;
+        uint256 endDate;
         uint256 balance;
     }
 
-    mapping(address => Sub) public subs;
+    struct Subscriber {
+        uint256 subscriberId;
+        address subscriberAddress;
+        bool isActive;
+        uint256 balance;
+    }
+
+// Counters
+uint256 public subscriptionCounter;
+uint256 public subscriberCounter;
+
+
+    mapping(address => Subscription) public subs;
     mapping(address => bool) public isRegistered;
     uint256 public eventCounter;
 
