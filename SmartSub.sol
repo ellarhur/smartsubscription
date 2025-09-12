@@ -17,14 +17,16 @@ contract SmartSub {
     
     // Struct & Enums
     enum subStatus { Active, Paused }
+    enum BillingCycle { Weekly, Monthly, Yearly }
 
     struct Subscription {
         uint256 subscriptionId;
         string title;
         address ownerAddress;
         uint256 fee;
-        uint256 periodLength;
+        BillingCycle cycle;
         subStatus status;
+        bool paused;
         uint256 startDate;
         uint256 endDate;
         uint256 balance;
@@ -33,7 +35,6 @@ contract SmartSub {
     struct Subscriber {
         uint256 subscriberId;
         address subscriberAddress;
-        bool isActive;
         uint256 balance;
     }
 
@@ -44,6 +45,7 @@ uint256 public subscriberCounter;
 // Mappings
 mapping(uint256 => address) public ownerAddress; // Mapping for the owner address of subscriptions
 mapping(uint256 => mapping(address => Subscription)) public subscriptions; // Mapping for if the subscribers has an active subscription
+
 
     // Constructor
     constructor() {
@@ -57,10 +59,14 @@ mapping(uint256 => mapping(address => Subscription)) public subscriptions; // Ma
                 require(subscriptions[i].owner != msg.sender || keccak256(bytes(subscriptions[i].title)) == keccak256(bytes(subTitle)), "Owner already made this subscription"); // Make sure the owner hasn't already created this subscription.
                 require(periodLength > 0, "You have to set a period for the subscription"); // Make sure the owner sets a period
         }
-        subscriptionCounter++;
-        subscriptions[subscriptionCounter][msg.sender] = Subscription(subscriptionCounter, _title, msg.sender, _fee, _periodLength, subStatus.Active, block.timestamp, block.timestamp + _periodLength, 0);
-        ownerAddress[subscriptionCounter] = msg.sender;
     }
+
+    function getCycleLength(BillingCycle cycle) public pure returns (uint256) {
+    if (cycle == BillingCycle.Weekly) return 7 days;
+    if (cycle == BillingCycle.Monthly) return 30 days;
+    if (cycle == BillingCycle.Yearly) return 365 days;
+    return 0;
+}
 }
 
 
