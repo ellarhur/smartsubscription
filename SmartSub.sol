@@ -4,32 +4,19 @@
 pragma solidity 0.8.30;
 
 contract SmartSub {
-       // Reentrancy-guard
-    uint256 private _locked = 1;
-    modifier nonReentrant() {
-        require(_locked == 1, "Reentrant call");
-        _locked = 2;
-        _;
-        _locked = 1;
-    }
-
-    address public owner;
+      address public owner;
     
     // Struct & Enums
-    enum subStatus { Active, Paused }
-    enum BillingCycle { Weekly, Monthly, Yearly }
+    enum SubscriptionStatus { Active, Paused }
 
     struct Subscription {
         uint256 subscriptionId;
         string title;
         address ownerAddress;
         uint256 fee;
-        BillingCycle cycle;
-        subStatus status;
+        uint256 cycleLength;
+        SubscriptionStatus status;
         bool paused;
-        uint256 startDate;
-        uint256 endDate;
-        uint256 balance;
     }
 
     struct Subscriber {
@@ -38,68 +25,102 @@ contract SmartSub {
         uint256 balance;
     }
 
-// Counters
-uint256 public subscriptionCounter;
-uint256 public subscriberCounter;
+      // State variables
+    address public ownerAddress; // Saves the owner address on the blockchain
+    uint256 public nextSubscriptionId; // Makes an ID available for the next created subscription
+    uint256 public nextSubscriberId; // Makes an ID available for the next created subscriber
 
 // Mappings
-mapping(uint256 => address) public ownerAddress; // Mapping for the owner address of subscriptions
-mapping(uint256 => mapping(address => Subscription)) public subscriptions; // Mapping for if the subscribers has an active subscription
+    mapping(uint256 => Subscription) public subscriptions;
+    mapping(address => uint256[]) public subscribers;
+    mapping(uint256 => uint256[]) public subscriptionSubscriptions;
+ 
 
+// Events
+    event SubCreated(uint256 indexed serviceId, address indexed owner, string name, uint256 fee, uint256 periodLength);
+    event SubUpdated(uint256 indexed serviceId, uint256 newFee);
+    event SubStatusChanged(uint256 indexed serviceId, ServiceStatus status);
+    event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
+    event RevenueWithdrawn(uint256 indexed serviceId, address indexed owner, uint256 amount);
 
-    // Constructor
+   //  Modifiers
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the contract owner can do this.");
+        _;
+    }
+    
+    modifier onlySubOwner(uint256 serviceId) {
+        require(services[serviceId].owner == msg.sender, "Only the contract owner can do this.");
+        _;
+    }
+    
+    modifier subExists(uint256 serviceId) {
+        require(serviceId < nextServiceId, "This subscription does not exist.");
+        _;
+    }
+    
+    modifier serviceActive(uint256 serviceId) {
+        require(services[serviceId].status == ServiceStatus.Active, "This subscription is paused.");
+        _;
+    }
+    
+    modifier validPeriod(uint256 cycleLength) {
+        require(periodLength >= 1 days, "You have to set a cycle length for your subscription.");
+        _;
+    }
+
+     // Constructor
     constructor() {
     owner = msg.sender;
-    subscriptionCounter = 0;
-    subscriberCounter = 0;
+    nextSubscriberId = 0;
+    nextSubscriptionId = 0;
     }
 
-    function addSub(string memory subTitle, uint256 subFee, uint256 periodLength) public {
-        for (uint256 i = 0; i < subscriptionCounter; i++) {
-                require(subscriptions[i].owner != msg.sender || keccak256(bytes(subscriptions[i].title)) == keccak256(bytes(subTitle)), "Owner already made this subscription"); // Make sure the owner hasn't already created this subscription.
-                require(periodLength > 0, "You have to set a period for the subscription"); // Make sure the owner sets a period
-        }
+
+    function createSub(string memory subTitle, uint256 subFee, uint256 cycleLength, subStatus status) public {
+    require(cycleLength > 0, "You have to set a period for the subscription"); // Make sure the owner sets a period
+    uint256 subscriptionId = subscriptionCounter++;
+    subscriptions[subscriptionId] = Subscription({
+        owner: msg.sender,
+        title: subTitle,
+        fee: subFee,
+        cycleLength: daysBetween * 1 days, // gör om dagar till sekunder
+        status: status,
+        startDate: block.timestamp,
+        endDate: block.timestamp + cycleLength,
+        balance: 0,
+        paused: false
+    });
     }
 
-    function getCycleLength(BillingCycle cycle) public pure returns (uint256) {
-    if (cycle == BillingCycle.Weekly) return 7 days;
-    if (cycle == BillingCycle.Monthly) return 30 days;
-    if (cycle == BillingCycle.Yearly) return 365 days;
-    return 0;
+
+
+
+// function paySub(address _subscriber, uint256 _fee) public nonReentrant { 
+
+
+// function extendSub(address _subscriber) public nonReentrant {
+
+
+// function isActive(address _subscriber) public view returns (bool) {
+
+
+// function getEndDate(address _subscriber) public view returns (uint256) {
+
+
+// // function giveawaySub(address _subscriber) public nonReentrant {
+
+// function changeFee(uint256 _fee) public nonReentrant {
+
+
+// function pauseSub(address _subscriber) public nonReentrant {
+
+
+// function resumeSub(address _subscriber) public nonReentrant {
+
+
+// function collectRevenue() public nonReentrant {
+
+
+
 }
-}
-
-
-
-function paySub(address _subscriber, uint256 _fee) public nonReentrant { 
-}
-
-function extendSub(address _subscriber) public nonReentrant {
-}
-
-function isActive(address _subscriber) public view returns (bool) {
-}
-
-function getEndDate(address _subscriber) public view returns (uint256) {
-}
-
-function giveawaySub(address _subscriber) public nonReentrant {
-}
-
-function changeFee(uint256 _fee) public nonReentrant {
-}
-
-function pauseSub(address _subscriber) public nonReentrant {
-}
-
-function resumeSub(address _subscriber) public nonReentrant {
-}
-
-function collectRevenue() public nonReentrant {
-}
-
-event SubCreated(address indexed subscriber, uint256 fee, uint256 periodLength);
-event SubPaid(address indexed subscriber, uint256 fee);
-event SubExtended(address indexed subscriber, uint256 periodLength);
-event SubGiveaway(address indexed subscriber);
-event SubPaused(address indexed subscriber);
