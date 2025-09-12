@@ -29,7 +29,7 @@ contract SmartSub {
 // Mappings
     mapping(uint256 => Subscription) public subscriptions;
     mapping(address => uint256[]) public subscribers;
-    mapping(uint256 => uint256[]) public subscriptionSubscriptions;
+    mapping(string => uint256) public titleToSubscriptionId; // Mapping från titel till ID
  
 
 // Events
@@ -75,6 +75,7 @@ contract SmartSub {
 
     function createSub(string memory title, uint256 fee, uint256 cycleLength) public returns(uint256) {
         require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
+        require(titleToSubscriptionId[title] == 0, "A subscription with this title already exists.");
 
         uint256 subscriptionId = nextSubscriptionId++;
            subscriptions[subscriptionId] = Subscription({
@@ -87,11 +88,26 @@ contract SmartSub {
             paused: false
         });
 
+        titleToSubscriptionId[title] = subscriptionId; // Spara titel-till-ID mapping
         subscribers[msg.sender].push(subscriptionId);
         emit SubCreated(subscriptionId, msg.sender, title, fee, cycleLength);
         return subscriptionId;
     }
 
+    // Prenumerera med titel istället för ID - mycket mer användarvänligt!
+    function subscribeByTitle(string memory title) external payable {
+        uint256 subscriptionId = titleToSubscriptionId[title];
+        require(subscriptionId != 0, "No subscription found with this title.");
+        require(subscriptions[subscriptionId].status == SubscriptionStatus.Active, "This subscription is not active.");
+        
+        Subscription storage subscription = subscriptions[subscriptionId];
+        require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
+        
+        // Transfer payment to subscription owner
+        payable(subscription.ownerAddress).transfer(msg.value);
+    }
+
+    // Behåll den gamla funktionen för bakåtkompatibilitet
     function subscribe(uint256 subscriptionId) external 
         payable 
         subExists(subscriptionId) 
@@ -99,10 +115,7 @@ contract SmartSub {
         Subscription storage subscription = subscriptions[subscriptionId];
         require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
         
-        // Simple implementation - just accept the payment
-        // In a more complete version, you would track individual subscriptions
-        
-        // Transfer payment to subscription owner (simplified)
+        // Transfer payment to subscription owner
         payable(subscription.ownerAddress).transfer(msg.value);
     }
 
