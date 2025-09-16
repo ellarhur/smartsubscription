@@ -40,6 +40,8 @@ contract SmartSub {
     event SubStatusChanged(uint256 indexed subscriptionId, SubscriptionStatus status);
     event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
     event RevenueWithdrawn(uint256 indexed subscriptionId, address indexed ownerAddress, uint256 amount);
+    event FallbackCalled(address indexed subscriberAddress);
+
 
 // Constructor
     constructor() {
@@ -73,6 +75,21 @@ contract SmartSub {
         require(cycleLength >= 1 days, "You have to set a cycle length for your subscription.");
         _;
     }
+
+// --- RECEIVE & FALLBACK --- //
+
+// Fallback if a function is called that doesn't exist
+fallback() external {
+    emit FallbackCalled(msg.sender);
+    revert("The function you called does not exist, try another one.");
+}
+
+// receive() returns ETH if money is sent to a function that doesn't exist
+receive() external payable { 
+    // Returnera pengarna omedelbart till avsändaren
+    payable(msg.sender).transfer(msg.value);
+    revert("This function does not exist, ETH is returned to you.");
+}
 
  // -- FUNCTIONS FOR OWNERS -- //  
 
@@ -171,5 +188,4 @@ function checkMySubscriptionStatus(uint256 subscriptionId) public view returns (
 function getSubscriptionEndDate(uint256 subscriptionId) public view returns (uint256) {
     return subscriptions[subscriptionId].endDate;
 }
-
 }
