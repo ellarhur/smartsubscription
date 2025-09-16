@@ -15,7 +15,8 @@ contract SmartSub {
         uint256 cycleLength;
         SubscriptionStatus status;
         bool paused;
-
+        uint256 endDate;
+        uint256 startDate;
     }
     struct Subscriber {
         uint256 subscriberId;
@@ -29,13 +30,12 @@ contract SmartSub {
 // Mappings
     mapping(uint256 => Subscription) public subscriptions;
     mapping(address => uint256[]) public subscribers;
-    mapping(string => uint256) public titleToSubscriptionId; // Mapping från titel till ID
     mapping(address => mapping(uint256 => bool)) public userSubscriptions; // Spåra vilka användare som prenumererar på vad
     mapping(address => mapping(uint256 => uint256)) public userSubscriptionStart; // När prenumerationen startade
  
 
 // Events
-    event SubCreated(uint256 indexed subscriptionId, address indexed ownerAddress, string title, uint256 fee, uint256 cycleLength);
+    event SubCreated(uint256 indexed subscriptionId, address indexed ownerAddress, string title, uint256 fee, uint256 cycleLength, uint256 endDate, uint256 startDate);
     event SubUpdated(uint256 indexed subscriptionId, uint256 newFee);
     event SubStatusChanged(uint256 indexed subscriptionId, SubscriptionStatus status);
     event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
@@ -77,9 +77,10 @@ contract SmartSub {
  // -- FUNCTIONS FOR OWNERS -- //  
 
 // Function for owners to create a new subscription service
-    function createSub(string memory title, uint256 fee, uint256 cycleLength) public returns(uint256) {
+    function createSub(string memory title, uint256 fee, uint256 cycleLength, uint256 endDate, uint256 startDate) public returns(uint256) {
         require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
-        require(titleToSubscriptionId[title] == 0, "A subscription with this title already exists.");
+        require(cycleLength > 0, "Cycle length must be greater than 0.");
+        require(endDate == 0 || endDate > block.timestamp, "End date must be 0 for no end date, or set to a future date.");
 
         uint256 subscriptionId = nextSubscriptionId++;
            subscriptions[subscriptionId] = Subscription({
@@ -89,12 +90,13 @@ contract SmartSub {
             fee: fee,
             cycleLength: cycleLength,
             status: SubscriptionStatus.Active,
-            paused: false
+            paused: false,
+            endDate: endDate, // 0 = betyder att det aldrig upphör automatiskt
+            startDate: block.timestamp
         });
 
-        titleToSubscriptionId[title] = subscriptionId; // Spara titel-till-ID mapping
         subscribers[msg.sender].push(subscriptionId);
-        emit SubCreated(subscriptionId, msg.sender, title, fee, cycleLength);
+        emit SubCreated(subscriptionId, msg.sender, title, fee, cycleLength, endDate, startDate);
         return subscriptionId;
     }
 
@@ -134,14 +136,13 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
         userSubscriptionStart[msg.sender][subscriptionId] = block.timestamp; // Spara starttid
         payable(subscription.ownerAddress).transfer(msg.value);
     }
-    
 
 // Function for subscribers to be able to pause their subscription by the ID
     function pauseSub(uint256 subscriptionId) public {
         require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
         require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
         
-        userSubscriptions[msg.sender][subscriptionId] = false; // Ta bort prenumerationen
+        userSubscriptions[msg.sender][subscriptionId] = false;
     }
 
 // Function for subscribers to be able to give away their subscription 
@@ -154,27 +155,14 @@ function giveawaySub(uint256 subscriptionId, address to) public {
     userSubscriptionStart[to][subscriptionId] = userSubscriptionStart[msg.sender][subscriptionId]; // Behåll ursprunglig starttid
 }
 
-// Function for subscribers to check if they have an active subscription
-function hasActiveSubscription(uint256 subscriptionId) public view returns (bool) {
+// Function for subscribers to check if they subscribe to this subscription ID
+function doISubscribeToThisSubId(uint256 subscriptionId) public view returns (bool) {
     return userSubscriptions[msg.sender][subscriptionId];
 }
 
 // Function for subscribers to get their subscription end date
 function getSubscriptionEndDate(uint256 subscriptionId) public view returns (uint256) {
-    require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
-    uint256 startTime = userSubscriptionStart[msg.sender][subscriptionId];
-    uint256 cycleLength = subscriptions[subscriptionId].cycleLength;
-    return startTime + cycleLength;
-}
-
-// Function for subscribers to get their subscription end date by title
-function getSubscriptionEndDateByTitle(string memory title) public view returns (uint256) {
-    uint256 subscriptionId = titleToSubscriptionId[title];
-    require(subscriptionId != 0, "No subscription found with this title.");
-    require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
-    uint256 startTime = userSubscriptionStart[msg.sender][subscriptionId];
-    uint256 cycleLength = subscriptions[subscriptionId].cycleLength;
-    return startTime + cycleLength;
+    return subscriptions[subscriptionId].endDate;
 }
 
 }

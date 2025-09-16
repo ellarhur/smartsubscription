@@ -44,20 +44,11 @@
 - *<b>Krav:*</b> Skicka ETH motsvarande tjänstens avgift
 - *<b>Säkerhet:*</b> Kontrollerar att tjänsten är aktiv och användaren inte redan prenumererar
 
-**`subscribeByTitle(string title)`**
-- *<b>Syfte:*</b> Prenumerera på en tjänst med titel (mer användarvänligt!)
-- *<b>Krav:*</b> Skicka ETH motsvarande tjänstens avgift
-- *<b>Exempel:*</b> `subscribeByTitle("Online Newspaper Subscription")` med 0.1 ETH
-
 #### Hantera prenumerationer:
 
 **`pauseSub(uint256 subscriptionId)`**
 - *<b>Syfte:*</b> Avsluta din prenumeration med ID
 - *<b>Resultat:*</b> Du förlorar tillgång till tjänsten
-
-**`pauseSubByTitle(string title)`**
-- *<b>Syfte:*</b> Avsluta din prenumeration med titel
-- *<b>Exempel:*</b> `pauseSubByTitle("Netflix Premium")`
 
 **`giveawaySub(uint256 subscriptionId, address to)`**
 - *<b>Syfte:*</b> Överför din prenumeration till någon annan
@@ -66,21 +57,13 @@
 
 #### Kolla prenumerationsstatus:
 
-**`hasActiveSubscription(uint256 subscriptionId)`**
+**`doISubscribeToThisSubId(uint256 subscriptionId)`**
 - *<b>Syfte:*</b> Kontrollera om du har aktiv prenumeration (med ID)
 - *<b>Returnerar:*</b> `true` eller `false`
-
-**`hasActiveSubscriptionByTitle(string title)`**
-- *<b>Syfte:*</b> Kontrollera om du har aktiv prenumeration (med titel)
-- *<b>Exempel:*</b> `hasActiveSubscriptionByTitle("Netflix Premium")`
 
 **`getSubscriptionEndDate(uint256 subscriptionId)`**
 - *<b>Syfte:*</b> Hämta slutdatum för din prenumeration (med ID)
 - *<b>Returnerar:*</b> Unix timestamp
-
-**`getSubscriptionEndDateByTitle(string title)`**
-- *<b>Syfte:*</b> Hämta slutdatum för din prenumeration (med titel)
-- *<b>Returnerar:*</b> Unix timestamp som kan konverteras till datum
 
 ## Modifiers, säkerhetsåtgärder osv
 
@@ -104,16 +87,16 @@
 createSub("Spotify Premium", 50000000000000000, 30 days); // 0.05 ETH/månad
 
 // Jag börjar prenumerera på Spotify Premium, jag skickar 0.05 ETH
-subscribeByTitle("Spotify Premium");
+subscribe("Spotify Premium");
 
 // Jag vill se att prenumerationen startades. Jag kollar status
-bool active = hasActiveSubscriptionByTitle("Spotify Premium");
+bool active = doISubscribeToThisSubId("Spotify Premium");
 
 // Jag vill se om min prenumeration måste uppdateras någon gång, har ett slutdatum
 uint256 endDate = getSubscriptionEndDateByTitle("Spotify Premium");
 
 // Jag bestämmer mig för att ta en paus i min prenumeration
-pauseSubByTitle("Spotify Premium");
+pause("Spotify Premium");
 
 // Du bestämmer dig för att höja priset och pausa tillgången till Spotify Premium tillfälligt
 manageSub(0, 75000000000000000, SubscriptionStatus.Paused);
