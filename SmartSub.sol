@@ -43,6 +43,15 @@ contract SmartSub {
     event FallbackCalled(address indexed subscriberAddress);
     event OwnerSet(address indexed ownerAddress, string message);
 
+// Custom Errors
+error OnlySubOwnerError(address caller, address actualOwner);
+error SubNotExistsError(uint256 subscriptionId);
+error SubIsPausedError(uint256 subscriptionId);
+error InvalidCycleLengthError(uint256 providedLength);
+error NotEnoughETHError(uint256 provided, uint256 required);
+error AlreadySubscribedError(address subscriber, uint256 subscriptionId);
+error NotSubscribedError(address subscriber, uint256 subscriptionId);
+
 
 // Constructor
     constructor() {
@@ -55,22 +64,30 @@ contract SmartSub {
 // Modifiers
     
     modifier onlySubOwner(uint256 subscriptionId) {
-        require(subscriptions[subscriptionId].ownerAddress == msg.sender, "Only the subscription owner can do this.");
+        if (subscriptions[subscriptionId].ownerAddress != msg.sender) {
+            revert OnlySubOwnerError(msg.sender, subscriptions[subscriptionId].ownerAddress);
+        }
         _;
     }
 
     modifier subExists(uint256 subscriptionId) {
-        require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
+        if (subscriptionId >= nextSubscriptionId) {
+            revert SubNotExistsError(subscriptionId);
+        }
         _;
     }
     
     modifier subActive(uint256 subscriptionId) {
-        require(subscriptions[subscriptionId].status == SubscriptionStatus.Active, "This subscription is paused.");
+        if (subscriptions[subscriptionId].status != SubscriptionStatus.Active) {
+            revert SubIsPausedError(subscriptionId);
+        }
         _;
     }
     
     modifier validPeriod(uint256 cycleLength) {
-        require(cycleLength >= 1 days, "You have to set a cycle length for your subscription.");
+        if (cycleLength < 1 days) {
+            revert InvalidCycleLengthError(cycleLength);
+        }
         _;
     }
 
@@ -94,7 +111,7 @@ receive() external payable {
 // Function for owners to create a new subscription service
     function createSub(string memory title, uint256 fee, uint256 cycleLength, uint256 endDate, uint256 startDate) public returns(uint256) {
         require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
-        require(cycleLength > 0, "Cycle length must be greater than 0.");
+        if (cycleLength == 0) revert InvalidCycleLengthError(cycleLength);
         require(endDate == 0 || endDate > block.timestamp, "End date must be 0 for no end date, or set to a future date.");
 
         uint256 subscriptionId = nextSubscriptionId++;
@@ -117,7 +134,7 @@ receive() external payable {
 
 // Function for owners to manage their subscription service's fee
     function manageSub(uint256 subscriptionId, uint256 newFee, SubscriptionStatus newStatus) public onlySubOwner(subscriptionId) {
-        require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
+        if (subscriptionId >= nextSubscriptionId) revert SubNotExistsError(subscriptionId);
         
         Subscription storage subscription = subscriptions[subscriptionId];
         subscription.fee = newFee;
@@ -129,9 +146,7 @@ receive() external payable {
 
 // Function for owners to withdraw the revenue
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
-    require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
-    // Simplified implementation - owner can call this function
-    // In a full implementation, this would transfer accumulated revenue
+    
     emit RevenueWithdrawn(subscriptionId, msg.sender, 0);
 }
 
@@ -143,9 +158,9 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
         subExists(subscriptionId) 
         subActive(subscriptionId)  {
         Subscription storage subscription = subscriptions[subscriptionId];
-        require(msg.value == fee, "The ETH amount sent must match the fee parameter.");
-        require(fee >= subscription.fee, "Fee must be at least the subscription fee.");
-        require(!userSubscriptions[msg.sender][subscriptionId], "You are already subscribed to this service.");
+        if (msg.value != fee) revert NotEnoughETHError(msg.value, fee);
+        if (fee < subscription.fee) revert NotEnoughETHError(fee, subscription.fee);
+        if (userSubscriptions[msg.sender][subscriptionId]) revert AlreadySubscribedError(msg.sender, subscriptionId);
         
         userSubscriptions[msg.sender][subscriptionId] = true; // Markera användaren som prenumerant
         userSubscriptionStart[msg.sender][subscriptionId] = block.timestamp; // Spara starttid
@@ -154,15 +169,15 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
 
 // Function for subscribers to be able to pause their subscription by the ID
     function pauseSub(uint256 subscriptionId) public {
-        require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
-        require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
+        if (subscriptionId >= nextSubscriptionId) revert SubNotExistsError(subscriptionId);
+        if (!userSubscriptions[msg.sender][subscriptionId]) revert NotSubscribedError(msg.sender, subscriptionId);
         
         userSubscriptions[msg.sender][subscriptionId] = false;
     }
 
 // Function for subscribers to be able to give away their subscription 
 function giveawaySub(uint256 subscriptionId, address sendingTo) public {
-    require(subscriptionId < nextSubscriptionId, "This subscription doesn't exist.");
+    require(subscriptionId < nextSubscriptionId, SubNotExistsError());
     require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
     
     userSubscriptions[msg.sender][subscriptionId] = false;
