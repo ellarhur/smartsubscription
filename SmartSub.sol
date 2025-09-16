@@ -42,6 +42,7 @@ contract SmartSub {
     event RevenueWithdrawn(uint256 indexed subscriptionId, address indexed ownerAddress, uint256 amount);
     event FallbackCalled(address indexed subscriberAddress);
     event OwnerSet(address indexed ownerAddress, string message);
+    event SubscribedToSub(uint256 indexed subscriptionId, address indexed subscriberAddress);
 
 // Custom Errors
 error OnlySubOwnerError(address caller, address actualOwner);
@@ -123,7 +124,7 @@ receive() external payable {
             cycleLength: cycleLength,
             status: SubscriptionStatus.Active,
             paused: false,
-            endDate: endDate, // 0 = betyder att det aldrig upphör automatiskt
+            endDate: endDate, // 0 = never ending subscription
             startDate: block.timestamp
         });
 
@@ -146,7 +147,6 @@ receive() external payable {
 
 // Function for owners to withdraw the revenue
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
-
     emit RevenueWithdrawn(subscriptionId, msg.sender, 0);
 }
 
@@ -158,13 +158,20 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
         subExists(subscriptionId) 
         subActive(subscriptionId)  {
         Subscription storage subscription = subscriptions[subscriptionId];
+        if (userSubscriptions[msg.sender][subscriptionId]) revert AlreadySubscribedError(msg.sender, subscriptionId);
+        if (msg.value < subscription.fee) {
+            revert NotEnoughETHError(msg.value, subscription.fee);
+        }
         require(msg.value == fee, "The ETH amount sent must match the fee parameter.");
         require(fee >= subscription.fee, "Fee must be at least the subscription fee.");
-        if (userSubscriptions[msg.sender][subscriptionId]) revert AlreadySubscribedError(msg.sender, subscriptionId);
         
-        userSubscriptions[msg.sender][subscriptionId] = true; // Markera användaren som prenumerant
-        userSubscriptionStart[msg.sender][subscriptionId] = block.timestamp; // Spara starttid
+        userSubscriptions[msg.sender][subscriptionId] = true; 
+        userSubscriptionStart[msg.sender][subscriptionId] = block.timestamp;
+        
+        assert(userSubscriptions[msg.sender][subscriptionId] == true);
+        
         payable(subscription.ownerAddress).transfer(msg.value);
+        emit SubscribedToSub(subscriptionId, msg.sender);
     }
 
 // Function for subscribers to be able to pause their subscription by the ID
