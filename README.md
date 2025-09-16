@@ -4,7 +4,6 @@
 
 ## Hur kontraktet är upplagt
 
-<h2>Dessa funktioner skapade jag:</h2>
 - *<b>Skapa prenumerationstjänster som subscription owner</b>* med egen avgift och hur frekvent prenumerationen ska vara
 - *<b>Prenumerera på tjänster som subscriber</b>* med ETH
 - *<b>Hantera sina prenumerationer som subscriber</b>* Du kan pausa, ge bort din prenumeration, och kolla status på när prenumerationen tar slut
