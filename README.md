@@ -12,7 +12,7 @@
 
 ## Kontraktets Funktioner
 
-### 🏗️ FUNKTIONER FÖR ÄGARE (Subscription Owners)
+### FUNKTIONER FÖR ÄGARE (Subscription Owners)
 
 #### `createSub(string title, uint256 fee, uint256 cycleLength)`
 - *<b>Syfte:*</b>Skapar en ny prenumerationstjänst
@@ -36,7 +36,7 @@
 - *<b>Syfte:*</b> Placeholder för framtida funktionalitet att ta ut intäkter
 - *<b>Status:*</b> Förenklad implementation (ingen balanshantering än)
 
-### 👥 FUNKTIONER FÖR PRENUMERANTER (Subscribers)
+### FUNKTIONER FÖR PRENUMERANTER (Subscribers)
 
 #### Prenumerera på tjänster:
 
@@ -45,7 +45,7 @@
 - *<b>Krav:*</b> Skicka ETH motsvarande tjänstens avgift
 - *<b>Säkerhet:*</b> Kontrollerar att tjänsten är aktiv och användaren inte redan prenumererar
 
-**`subscribeByTitle(string title)`** ⭐ *Rekommenderas*
+**`subscribeByTitle(string title)`**
 - *<b>Syfte:*</b> Prenumerera på en tjänst med titel (mer användarvänligt!)
 - *<b>Krav:*</b> Skicka ETH motsvarande tjänstens avgift
 - *<b>Exempel:*</b> `subscribeByTitle("Online Newspaper Subscription")` med 0.1 ETH
@@ -56,7 +56,7 @@
 - *<b>Syfte:*</b> Avsluta din prenumeration med ID
 - *<b>Resultat:*</b> Du förlorar tillgång till tjänsten
 
-**`pauseSubByTitle(string title)`** ⭐ *Rekommenderas*
+**`pauseSubByTitle(string title)`**
 - *<b>Syfte:*</b> Avsluta din prenumeration med titel
 - *<b>Exempel:*</b> `pauseSubByTitle("Netflix Premium")`
 
@@ -71,7 +71,7 @@
 - *<b>Syfte:*</b> Kontrollera om du har aktiv prenumeration (med ID)
 - *<b>Returnerar:*</b> `true` eller `false`
 
-**`hasActiveSubscriptionByTitle(string title)`** ⭐ *Rekommenderas*
+**`hasActiveSubscriptionByTitle(string title)`**
 - *<b>Syfte:*</b> Kontrollera om du har aktiv prenumeration (med titel)
 - *<b>Exempel:*</b> `hasActiveSubscriptionByTitle("Netflix Premium")`
 
@@ -79,7 +79,7 @@
 - *<b>Syfte:*</b> Hämta slutdatum för din prenumeration (med ID)
 - *<b>Returnerar:*</b> Unix timestamp
 
-**`getSubscriptionEndDateByTitle(string title)`** ⭐ *Rekommenderas*
+**`getSubscriptionEndDateByTitle(string title)`**
 - *<b>Syfte:*</b> Hämta slutdatum för din prenumeration (med titel)
 - *<b>Returnerar:*</b> Unix timestamp som kan konverteras till datum
 
