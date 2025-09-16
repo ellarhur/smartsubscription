@@ -45,7 +45,6 @@ contract SmartSub {
 
 // Custom Errors
 error OnlySubOwnerError(address caller, address actualOwner);
-error SubNotExistsError(uint256 subscriptionId);
 error SubIsPausedError(uint256 subscriptionId);
 error InvalidCycleLengthError(uint256 providedLength);
 error NotEnoughETHError(uint256 provided, uint256 required);
@@ -72,7 +71,7 @@ error NotSubscribedError(address subscriber, uint256 subscriptionId);
 
     modifier subExists(uint256 subscriptionId) {
         if (subscriptionId >= nextSubscriptionId) {
-            revert SubNotExistsError(subscriptionId);
+            revert NotSubscribedError(subscriptionId);
         }
         _;
     }
@@ -134,7 +133,7 @@ receive() external payable {
 
 // Function for owners to manage their subscription service's fee
     function manageSub(uint256 subscriptionId, uint256 newFee, SubscriptionStatus newStatus) public onlySubOwner(subscriptionId) {
-        if (subscriptionId >= nextSubscriptionId) revert SubNotExistsError(subscriptionId);
+        if (subscriptionId >= nextSubscriptionId) revert NotSubscribedError(subscriptionId);
         
         Subscription storage subscription = subscriptions[subscriptionId];
         subscription.fee = newFee;
@@ -146,7 +145,7 @@ receive() external payable {
 
 // Function for owners to withdraw the revenue
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
-    
+
     emit RevenueWithdrawn(subscriptionId, msg.sender, 0);
 }
 
@@ -169,7 +168,7 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
 
 // Function for subscribers to be able to pause their subscription by the ID
     function pauseSub(uint256 subscriptionId) public {
-        if (subscriptionId >= nextSubscriptionId) revert SubNotExistsError(subscriptionId);
+        if (subscriptionId >= nextSubscriptionId) revert NotSubscribedError(subscriptionId);
         if (!userSubscriptions[msg.sender][subscriptionId]) revert NotSubscribedError(msg.sender, subscriptionId);
         
         userSubscriptions[msg.sender][subscriptionId] = false;
@@ -177,8 +176,7 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
 
 // Function for subscribers to be able to give away their subscription 
 function giveawaySub(uint256 subscriptionId, address sendingTo) public {
-    require(subscriptionId < nextSubscriptionId, SubNotExistsError());
-    require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
+    if (!userSubscriptions[msg.sender][subscriptionId]) revert NotSubscribedError(msg.sender, subscriptionId);
     
     userSubscriptions[msg.sender][subscriptionId] = false;
     userSubscriptions[sendingTo][subscriptionId] = true;
