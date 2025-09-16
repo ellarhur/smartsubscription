@@ -57,7 +57,7 @@
 
 #### Kolla prenumerationsstatus:
 
-**`doISubscribeToThisSubId(uint256 subscriptionId)`**
+**`checkMySubscriptionStatus(uint256 subscriptionId)`**
 - *<b>Syfte:*</b> Kontrollera om du har aktiv prenumeration (med ID)
 - *<b>Returnerar:*</b> `true` eller `false`
 

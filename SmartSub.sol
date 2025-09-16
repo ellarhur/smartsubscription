@@ -146,18 +146,25 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
     }
 
 // Function for subscribers to be able to give away their subscription 
-function giveawaySub(uint256 subscriptionId, address to) public {
+function giveawaySub(uint256 subscriptionId, address sendingTo) public {
     require(subscriptionId < nextSubscriptionId, "This subscription doesn't exist.");
     require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
     
     userSubscriptions[msg.sender][subscriptionId] = false;
-    userSubscriptions[to][subscriptionId] = true;
-    userSubscriptionStart[to][subscriptionId] = userSubscriptionStart[msg.sender][subscriptionId]; // Behåll ursprunglig starttid
+    userSubscriptions[sendingTo][subscriptionId] = true;
+    userSubscriptionStart[sendingTo][subscriptionId] = userSubscriptionStart[msg.sender][subscriptionId]; // Behåll ursprunglig starttid
 }
 
 // Function for subscribers to check if they subscribe to this subscription ID
-function doISubscribeToThisSubId(uint256 subscriptionId) public view returns (bool) {
-    return userSubscriptions[msg.sender][subscriptionId];
+function checkMySubscriptionStatus(uint256 subscriptionId) public view returns (string memory) {
+    if (subscriptionId >= nextSubscriptionId) {
+        return "This subscription does not exist.";
+    }
+    if (userSubscriptions[msg.sender][subscriptionId]) {
+        return "Yes, you are subscribed to this service.";
+    } else {
+        return "No, you do not have this subscription.";
+    }
 }
 
 // Function for subscribers to get their subscription end date
