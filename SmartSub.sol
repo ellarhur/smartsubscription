@@ -41,26 +41,24 @@ contract SmartSub {
     event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
     event RevenueWithdrawn(uint256 indexed subscriptionId, address indexed ownerAddress, uint256 amount);
     event FallbackCalled(address indexed subscriberAddress);
+    event OwnerSet(address indexed ownerAddress, string message);
 
 
 // Constructor
     constructor() {
     owner = msg.sender;
+    emit OwnerSet(msg.sender, "The owner has been set, it's you!");
     nextSubscriberId = 0;
     nextSubscriptionId = 0;
     }
 
 // Modifiers
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only the contract owner can do this.");
-        _;
-    }
     
     modifier onlySubOwner(uint256 subscriptionId) {
         require(subscriptions[subscriptionId].ownerAddress == msg.sender, "Only the subscription owner can do this.");
         _;
     }
-    
+
     modifier subExists(uint256 subscriptionId) {
         require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
         _;
