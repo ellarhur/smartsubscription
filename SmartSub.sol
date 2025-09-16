@@ -41,6 +41,13 @@ contract SmartSub {
     event SubTransferred(uint256 indexed subscriptionId, address indexed from, address indexed to);
     event RevenueWithdrawn(uint256 indexed subscriptionId, address indexed ownerAddress, uint256 amount);
 
+// Constructor
+    constructor() {
+    owner = msg.sender;
+    nextSubscriberId = 0;
+    nextSubscriptionId = 0;
+    }
+
 // Modifiers
     modifier onlyOwner() {
         require(msg.sender == owner, "Only the contract owner can do this.");
@@ -66,14 +73,6 @@ contract SmartSub {
         require(cycleLength >= 1 days, "You have to set a cycle length for your subscription.");
         _;
     }
-
-// Constructor
-    constructor() {
-    owner = msg.sender;
-    nextSubscriberId = 0;
-    nextSubscriptionId = 0;
-    }
-
 
  // -- FUNCTIONS FOR OWNERS -- //  
 
@@ -114,18 +113,21 @@ contract SmartSub {
 // Function for owners to withdraw the revenue
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
     require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
+    // Simplified implementation - owner can call this function
+    // In a full implementation, this would transfer accumulated revenue
+    emit RevenueWithdrawn(subscriptionId, msg.sender, 0);
 }
-
 
  // -- FUNCTIONS FOR SUBSCRIBERS -- //  
 
 // Function for subscribers to start subscribing by ID
-    function subscribe(uint256 subscriptionId) external 
+    function subscribe(uint256 subscriptionId, uint256 fee) external 
         payable 
         subExists(subscriptionId) 
         subActive(subscriptionId)  {
         Subscription storage subscription = subscriptions[subscriptionId];
-        require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
+        require(msg.value == fee, "The ETH amount sent must match the fee parameter.");
+        require(fee >= subscription.fee, "Fee must be at least the subscription fee.");
         require(!userSubscriptions[msg.sender][subscriptionId], "You are already subscribed to this service.");
         
         userSubscriptions[msg.sender][subscriptionId] = true; // Markera användaren som prenumerant
@@ -133,33 +135,10 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
         payable(subscription.ownerAddress).transfer(msg.value);
     }
     
-// Function for subscribers to start subscribing by title
-    function subscribeByTitle(string memory title) external payable {
-        uint256 subscriptionId = titleToSubscriptionId[title];
-        require(subscriptionId != 0, "No subscription found with this title.");
-        require(subscriptions[subscriptionId].status == SubscriptionStatus.Active, "This subscription is not active.");
-        require(!userSubscriptions[msg.sender][subscriptionId], "You are already subscribed to this service.");
-        
-        Subscription storage subscription = subscriptions[subscriptionId];
-        require(msg.value >= subscription.fee, "You don't have enough ETH to subscribe unfortunately.");
-        
-        userSubscriptions[msg.sender][subscriptionId] = true; // Markera användaren som prenumerant
-        userSubscriptionStart[msg.sender][subscriptionId] = block.timestamp; // Spara starttid
-        payable(subscription.ownerAddress).transfer(msg.value);
-    }
 
 // Function for subscribers to be able to pause their subscription by the ID
     function pauseSub(uint256 subscriptionId) public {
         require(subscriptionId < nextSubscriptionId, "This subscription does not exist.");
-        require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
-        
-        userSubscriptions[msg.sender][subscriptionId] = false; // Ta bort prenumerationen
-    }
-
-// Function for subscribers to be able to pause their subscription by putting in the title
-    function pauseSubByTitle(string memory title) public {
-        uint256 subscriptionId = titleToSubscriptionId[title];
-        require(subscriptionId != 0, "No subscription found with this title.");
         require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service.");
         
         userSubscriptions[msg.sender][subscriptionId] = false; // Ta bort prenumerationen
@@ -177,13 +156,6 @@ function giveawaySub(uint256 subscriptionId, address to) public {
 
 // Function for subscribers to check if they have an active subscription
 function hasActiveSubscription(uint256 subscriptionId) public view returns (bool) {
-    return userSubscriptions[msg.sender][subscriptionId];
-}
-
-// Function for subscribers to check if they have an active subscription by title
-function hasActiveSubscriptionByTitle(string memory title) public view returns (bool) {
-    uint256 subscriptionId = titleToSubscriptionId[title];
-    require(subscriptionId != 0, "No subscription found with this title.");
     return userSubscriptions[msg.sender][subscriptionId];
 }
 
