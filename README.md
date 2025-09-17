@@ -106,3 +106,5 @@ manageSub(0, 75000000000000000, SubscriptionStatus.Paused);
 ## Gasoptimeringar
 
 ## Tester med hardhat
+
+## Starta upp hardhat såhär
