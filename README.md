@@ -101,10 +101,24 @@ pause("Spotify Premium");
 // Du bestämmer dig för att höja priset och pausa tillgången till Spotify Premium tillfälligt
 manageSub(0, 75000000000000000, SubscriptionStatus.Paused);
 ```
-## Så kan det gå till när du använder mitt smart kontrakt!
+## Tester med Hardhat
 
-## Gasoptimeringar
+*<b>Deployment*</b>: Vi testar att ägaren sätts.
 
-## Tester med hardhat
+*<b>createSub*</b>: Vi testar att nextSubscriptionId ökar, vi testar att init-värdet är 0, testar att revert funkar.
 
-## Starta upp hardhat såhär
+*<b>manageSub*</b>: Vi testar att bara owners kan göra funktionen, att ID måste finnas, att status ändras till paused if paused.
+
+*<b>withdrawRevenue*</b>: Vi testar att bara owner kan göra funktionen, att revert dyker upp när id inte finns, kollar att reentrancyskydd finns där
+
+*<b>subscribe*</b>: Vi testar att ägaren får sina pengar, att eventet triggas, att det blir revert om sub inte finns, kollar om eth är tillräckligt bland annat.
+
+*<b>pauseSub*</b>: Vi testar att det funkar, samt att fel uppstår vid non-existent och ej subscribed.
+
+*<b>giveawaySub*</b>: Vi testar transfer, att false/true sätts korrekt, start date bevaras, samt revert när användaren inte är subscribed.
+
+*<b>checkMySubscriptionStatus*</b>: Vi testar både yes/no och non-existent.
+
+*<b>getSubscriptionEndDate*</b>: Vi testar både specificerat datum och 0.
+
+

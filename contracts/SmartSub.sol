@@ -1,11 +1,11 @@
-// The Smart Contact for my subscription service
+// Det smarta kontraktet för min prenumerationstjänst
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
 contract SmartSub {
     address public owner;
     
-// Struct & Enums
+// Strukturer & Enums
     enum SubscriptionStatus { Active, Paused }
     struct Subscription {
         uint256 subscriptionId;
@@ -24,8 +24,8 @@ contract SmartSub {
     }
 
 // State variables
-    uint256 public nextSubscriptionId; // Makes an ID available for the next created subscription
-    uint256 public nextSubscriberId; // Makes an ID available for the next created subscriber
+    uint256 public nextSubscriptionId; // Gör ett ID tillgängligt för nästa skapade prenumeration
+    uint256 public nextSubscriberId; // Gör ett ID tillgängligt för nästa skapade prenumerant
 
 // Mappings
     mapping(uint256 => Subscription) public subscriptions;
@@ -45,7 +45,7 @@ contract SmartSub {
     event OwnerSet(address indexed ownerAddress, string message);
     event SubscribedToSub(uint256 indexed subscriptionId, address indexed subscriberAddress);
 
-// Custom Errors
+// Custom errors
 error OnlySubOwnerError(address caller, address actualOwner);
 error SubscriptionNotFound(uint256 subscriptionId);
 error SubIsPausedError(uint256 subscriptionId);
@@ -55,7 +55,7 @@ error AlreadySubscribedError(address subscriber, uint256 subscriptionId);
 error NotSubscribedError(address subscriber, uint256 subscriptionId);
 
 
-// Constructor
+// Konstruktor
     constructor() {
     owner = msg.sender;
     emit OwnerSet(msg.sender, "The owner has been set, it's you!");
@@ -95,22 +95,22 @@ error NotSubscribedError(address subscriber, uint256 subscriptionId);
 
 // --- RECEIVE & FALLBACK --- //
 
-// Fallback if a function is called that doesn't exist
+// Fallback om en funktion anropas som inte finns
 fallback() external {
     emit FallbackCalled(msg.sender);
     revert("The function you called does not exist, try another one.");
 }
 
-// receive() returns ETH if money is sent to a function that doesn't exist
+// receive() returnerar ETH om pengar skickas till en funktion som inte finns
 receive() external payable { 
     // Returnera pengarna omedelbart till avsändaren
     payable(msg.sender).transfer(msg.value);
     revert("This function does not exist, ETH is returned to you.");
 }
 
- // -- FUNCTIONS FOR OWNERS -- //  
+ // -- FUNKTIONER FÖR ÄGARE -- //  
 
-// Function for owners to create a new subscription service
+// Funktion för ägare att skapa en ny prenumerationstjänst
     function createSub(string memory title, uint256 fee, uint256 cycleLength, uint256 endDate, uint256 startDate) public returns(uint256) {
         require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
         require(cycleLength > 0, "Cycle length must be greater than 0.");
@@ -125,7 +125,7 @@ receive() external payable {
             cycleLength: cycleLength,
             status: SubscriptionStatus.Active,
             paused: false,
-            endDate: endDate, // 0 = never ending subscription
+            endDate: endDate, // 0 = aldrig upphörande prenumeration
             startDate: block.timestamp
         });
 
@@ -134,7 +134,7 @@ receive() external payable {
         return subscriptionId;
     }
 
-// Function for owners to manage their subscription service's fee
+// Funktion för ägare att hantera sin prenumerationstjänsts avgift
     function manageSub(uint256 subscriptionId, uint256 newFee, SubscriptionStatus newStatus) public onlySubOwner(subscriptionId) {
         if (subscriptionId >= nextSubscriptionId) revert SubscriptionNotFound(subscriptionId);
         
@@ -146,12 +146,12 @@ receive() external payable {
         emit SubStatusChanged(subscriptionId, newStatus);
     }
 
-// Function for owners to withdraw the revenue
+// Funktion för ägare att ta ut intäkterna
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
     uint amountToTransfer = balances[msg.sender];
     require(amountToTransfer > 0, "You have no funds available");
 
-    balances[msg.sender] = 0; // Re-entrancy security
+    balances[msg.sender] = 0; // Säkerhet mot återinträde
     payable(msg.sender).transfer(amountToTransfer);
 
     emit RevenueWithdrawn(subscriptionId, msg.sender, amountToTransfer);
@@ -159,9 +159,9 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
 
 
 
- // -- FUNCTIONS FOR SUBSCRIBERS -- //  
+ // -- FUNKTIONER FÖR PRENUMERANTER -- //  
 
-// Function for subscribers to start subscribing by ID
+// Funktion för prenumeranter att börja prenumerera med ID
     function subscribe(uint256 subscriptionId, uint256 fee) external 
         payable 
         subExists(subscriptionId) 
@@ -184,7 +184,7 @@ balances[subscription.ownerAddress] += msg.value;
         emit SubscribedToSub(subscriptionId, msg.sender);
     }
 
-// Function for subscribers to be able to pause their subscription by the ID
+// Funktion för prenumeranter att kunna pausa sin prenumeration med ID
     function pauseSub(uint256 subscriptionId) public {
         if (subscriptionId >= nextSubscriptionId) revert SubscriptionNotFound(subscriptionId);
         if (!userSubscriptions[msg.sender][subscriptionId]) revert NotSubscribedError(msg.sender, subscriptionId);
@@ -192,7 +192,7 @@ balances[subscription.ownerAddress] += msg.value;
         userSubscriptions[msg.sender][subscriptionId] = false;
     }
 
-// Function for subscribers to be able to give away their subscription 
+// Funktion för prenumeranter att kunna ge bort sin prenumeration 
 function giveawaySub(uint256 subscriptionId, address sendingTo) public {
     if (!userSubscriptions[msg.sender][subscriptionId]) revert NotSubscribedError(msg.sender, subscriptionId);
     
@@ -201,7 +201,7 @@ function giveawaySub(uint256 subscriptionId, address sendingTo) public {
     userSubscriptionStart[sendingTo][subscriptionId] = userSubscriptionStart[msg.sender][subscriptionId]; // Behåll ursprunglig starttid
 }
 
-// Function for subscribers to check if they subscribe to this subscription ID
+// Funktion för prenumeranter att kontrollera om de prenumererar på detta prenumerations-ID
 function checkMySubscriptionStatus(uint256 subscriptionId) public view returns (string memory) {
     if (subscriptionId >= nextSubscriptionId) {
         return "This subscription does not exist.";
@@ -213,7 +213,7 @@ function checkMySubscriptionStatus(uint256 subscriptionId) public view returns (
     }
 }
 
-// Function for subscribers to get their subscription end date
+// Funktion för prenumeranter att få sitt prenumerations slutdatum
 function getSubscriptionEndDate(uint256 subscriptionId) public view returns (uint256) {
     return subscriptions[subscriptionId].endDate;
 }
