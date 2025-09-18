@@ -1,6 +1,6 @@
 // The Smart Contact for my subscription service
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity ^0.8.28;
 
 contract SmartSub {
     address public owner;
