@@ -103,22 +103,44 @@ manageSub(0, 75000000000000000, SubscriptionStatus.Paused);
 ```
 ## Tester med Hardhat
 
-*<b>Deployment*</b>: Vi testar att ägaren sätts.
+### Deployment
+- *<b>Syfte:</b>* Verifierar att kontraktets ägare sätts korrekt vid deployment
 
-*<b>createSub*</b>: Vi testar att nextSubscriptionId ökar, vi testar att init-värdet är 0, testar att revert funkar.
+### `createSub`
+- *<b>Kontrollerar:</b>* Att `nextSubscriptionId` börjar på 0
+- *<b>Validering:</b>* Att det inte går att skapa en prenumeration med `cycleLength = 0`
 
-*<b>manageSub*</b>: Vi testar att bara owners kan göra funktionen, att ID måste finnas, att status ändras till paused if paused.
+### `manageSub`
+- *<b>Säkerhet:</b>* Säkerställer att endast ägaren kan uppdatera en prenumeration
+- *<b>Felhantering:</b>* Kontrollerar att anrop på ett icke-existerande `subscriptionId` revertar
+- *<b>Funktionalitet:</b>* Testar att en prenumeration kan pausas (status ändras till `Paused`)
 
-*<b>withdrawRevenue*</b>: Vi testar att bara owner kan göra funktionen, att revert dyker upp när id inte finns, kollar att reentrancyskydd finns där
+### `withdrawRevenue`
+- *<b>Säkerhet:</b>* Säkerställer att endast ägaren kan ta ut intäkter
+- *<b>Felhantering:</b>* Testar att anrop på icke-existerande prenumeration revertar
+- *<b>Reentrancy-skydd:</b>* Bekräftar att balansen nollställs efter uttag
 
-*<b>subscribe*</b>: Vi testar att ägaren får sina pengar, att eventet triggas, att det blir revert om sub inte finns, kollar om eth är tillräckligt bland annat.
+### `subscribe`
+- *<b>Balanshantering:</b>* Kontrollerar att ägarens balans ökar när någon prenumererar
+- *<b>Dubbelprenumerationer:</b>* Säkerställer att det inte går att prenumerera två gånger på samma tjänst
+- *<b>Betalningsvalidering:</b>* Testar att anrop revertar om fee-argumentet inte matchar `msg.value`
 
-*<b>pauseSub*</b>: Vi testar att det funkar, samt att fel uppstår vid non-existent och ej subscribed.
+### `pauseSub`
+- *<b>Funktionalitet:</b>* Säkerställer att en användares prenumeration kan pausas (mappning sätts till `false`)
+- *<b>Felhantering:</b>* Kontrollerar att anrop på ett icke-existerande `subscriptionId` revertar
 
-*<b>giveawaySub*</b>: Vi testar transfer, att false/true sätts korrekt, start date bevaras, samt revert när användaren inte är subscribed.
+### `giveawaySub`
+- *<b>Överföring från:</b>* Verifierar att den ursprungliga användarens prenumeration sätts till `false`
+- *<b>Överföring till:</b>* Verifierar att mottagarens prenumeration sätts till `true`
 
-*<b>checkMySubscriptionStatus*</b>: Vi testar både yes/no och non-existent.
+### `checkMySubscriptionStatus`
+- *<b>Statusvalidering:</b>* Testar att rätt statusmeddelande returneras när användaren inte är prenumerant, och när de har prenumererat
+- *<b>Felhantering:</b>* Kontrollerar att felmeddelande returneras för icke-existerande prenumeration
 
-*<b>getSubscriptionEndDate*</b>: Vi testar både specificerat datum och 0.
+### `getSubscriptionEndDate`
+- *<b>Aktiva prenumerationer:</b>* Testar att korrekt slutdatum returneras om ett är satt
+- *<b>Inaktiva prenumerationer:</b>* Testar att `0` returneras om prenumerationen är utan slutdatum
 
-
+### `fallback / receive`
+- *<b>Felhantering:</b>* Säkerställer att anrop till en icke-existerande funktion revertar och loggar event
+- *<b>ETH-hantering:</b>* Testar att ETH som skickas direkt till kontraktet returneras och revertar
