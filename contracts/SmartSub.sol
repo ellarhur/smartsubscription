@@ -32,7 +32,8 @@ contract SmartSub {
     mapping(address => uint256[]) public subscribers;
     mapping(address => mapping(uint256 => bool)) public userSubscriptions; // Spåra vilka användare som prenumererar på vad
     mapping(address => mapping(uint256 => uint256)) public userSubscriptionStart; // När prenumerationen startade
- 
+    mapping(address => uint) public balances;
+
 
 // Events
     event SubCreated(uint256 indexed subscriptionId, address indexed ownerAddress, string title, uint256 fee, uint256 cycleLength, uint256 endDate, uint256 startDate);
@@ -147,8 +148,16 @@ receive() external payable {
 
 // Function for owners to withdraw the revenue
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
-    emit RevenueWithdrawn(subscriptionId, msg.sender, 0);
+    uint amountToTransfer = balances[msg.sender];
+    require(amountToTransfer > 0, "You have no funds available");
+
+    balances[msg.sender] = 0; // Re-entrancy security
+    payable(msg.sender).transfer(amountToTransfer);
+
+    emit RevenueWithdrawn(subscriptionId, msg.sender, amountToTransfer);
 }
+
+
 
  // -- FUNCTIONS FOR SUBSCRIBERS -- //  
 
@@ -170,7 +179,8 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
         
         assert(userSubscriptions[msg.sender][subscriptionId] == true);
         
-        payable(subscription.ownerAddress).transfer(msg.value);
+balances[subscription.ownerAddress] += msg.value;
+
         emit SubscribedToSub(subscriptionId, msg.sender);
     }
 
