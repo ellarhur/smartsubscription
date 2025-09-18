@@ -32,7 +32,10 @@ contract SmartSub {
     mapping(address => uint256[]) public subscribers;
     mapping(address => mapping(uint256 => bool)) public userSubscriptions; // Spåra vilka användare som prenumererar på vad
     mapping(address => mapping(uint256 => uint256)) public userSubscriptionStart; // När prenumerationen startade
+    mapping(address => mapping(uint256 => uint256)) public userSubscriptionExpiry; // När användarens prenumeration löper ut
     mapping(address => uint) public balances;
+    mapping(uint256 => uint256) public subscriptionBalances; // Balans per prenumeration
+
 
 
 // Events
@@ -44,6 +47,8 @@ contract SmartSub {
     event FallbackCalled(address indexed subscriberAddress);
     event OwnerSet(address indexed ownerAddress, string message);
     event SubscribedToSub(uint256 indexed subscriptionId, address indexed subscriberAddress);
+    event SubscriptionRenewed(uint256 indexed subscriptionId, address indexed subscriber, uint256 newExpiryDate);
+    event SubscriptionExpired(uint256 indexed subscriptionId, address indexed subscriber);
 
 // Custom errors
 error OnlySubOwnerError(address caller, address actualOwner);
@@ -111,7 +116,7 @@ receive() external payable {
  // -- FUNKTIONER FÖR ÄGARE -- //  
 
 // Funktion för ägare att skapa en ny prenumerationstjänst
-    function createSub(string memory title, uint256 fee, uint256 cycleLength, uint256 endDate, uint256 startDate) public returns(uint256) {
+    function createSub(string memory title, uint256 fee, uint256 cycleLength, uint256 endDate) public returns(uint256) {
         require(bytes(title).length > 0, "You have to give the service subscription a name or title.");
         require(cycleLength > 0, "Cycle length must be greater than 0.");
         require(endDate == 0 || endDate > block.timestamp, "End date must be 0 for no end date, or set to a future date.");
@@ -130,7 +135,7 @@ receive() external payable {
         });
 
         subscribers[msg.sender].push(subscriptionId);
-        emit SubCreated(subscriptionId, msg.sender, title, fee, cycleLength, endDate, startDate);
+        emit SubCreated(subscriptionId, msg.sender, title, fee, cycleLength, endDate, block.timestamp);
         return subscriptionId;
     }
 
@@ -146,18 +151,22 @@ receive() external payable {
         emit SubStatusChanged(subscriptionId, newStatus);
     }
 
-// Funktion för ägare att ta ut intäkterna
+// Funktion för ägare att ta ut intäkterna från en specifik prenumeration
 function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscriptionId) {
-    uint amountToTransfer = balances[msg.sender];
-    require(amountToTransfer > 0, "You have no funds available");
+    uint256 amountToTransfer = subscriptionBalances[subscriptionId];
+    require(amountToTransfer > 0, "No funds available for this subscription");
 
-    balances[msg.sender] = 0; // Säkerhet mot återinträde
+    subscriptionBalances[subscriptionId] = 0; // Säkerhet mot återinträde
     payable(msg.sender).transfer(amountToTransfer);
 
     emit RevenueWithdrawn(subscriptionId, msg.sender, amountToTransfer);
 }
 
-
+// Hjälpfunktion för att se balans för en specifik prenumeration
+function getSubscriptionBalance(uint256 subscriptionId) public view 
+    onlySubOwner(subscriptionId) returns (uint256) {
+    return subscriptionBalances[subscriptionId];
+}
 
  // -- FUNKTIONER FÖR PRENUMERANTER -- //  
 
@@ -176,12 +185,39 @@ function withdrawRevenue(uint256 subscriptionId) external onlySubOwner(subscript
         
         userSubscriptions[msg.sender][subscriptionId] = true; 
         userSubscriptionStart[msg.sender][subscriptionId] = block.timestamp;
+        userSubscriptionExpiry[msg.sender][subscriptionId] = block.timestamp + subscription.cycleLength;
         
         assert(userSubscriptions[msg.sender][subscriptionId] == true);
         
-balances[subscription.ownerAddress] += msg.value;
+        subscriptionBalances[subscriptionId] += msg.value;
 
         emit SubscribedToSub(subscriptionId, msg.sender);
+    }
+
+// Funktion för prenumeranter att förnya sin prenumeration
+    function renewSubscription(uint256 subscriptionId) external payable 
+        subExists(subscriptionId) 
+        subActive(subscriptionId) {
+        
+        Subscription storage subscription = subscriptions[subscriptionId];
+        
+        // Kontrollera att användaren redan prenumererar
+        require(userSubscriptions[msg.sender][subscriptionId], "You are not subscribed to this service");
+        require(msg.value >= subscription.fee, "Insufficient payment for renewal");
+        
+        uint256 currentExpiry = userSubscriptionExpiry[msg.sender][subscriptionId];
+        uint256 newExpiry;
+        
+        if (currentExpiry > block.timestamp) {
+            newExpiry = currentExpiry + subscription.cycleLength;
+        } else {
+            newExpiry = block.timestamp + subscription.cycleLength;
+        }
+        
+        userSubscriptionExpiry[msg.sender][subscriptionId] = newExpiry;
+        subscriptionBalances[subscriptionId] += msg.value;
+        
+        emit SubscriptionRenewed(subscriptionId, msg.sender, newExpiry);
     }
 
 // Funktion för prenumeranter att kunna pausa sin prenumeration med ID
@@ -198,7 +234,12 @@ function giveawaySub(uint256 subscriptionId, address sendingTo) public {
     
     userSubscriptions[msg.sender][subscriptionId] = false;
     userSubscriptions[sendingTo][subscriptionId] = true;
-    userSubscriptionStart[sendingTo][subscriptionId] = userSubscriptionStart[msg.sender][subscriptionId]; // Behåll ursprunglig starttid
+    
+    // Överför både starttid och förfallodatum
+    userSubscriptionStart[sendingTo][subscriptionId] = userSubscriptionStart[msg.sender][subscriptionId];
+    userSubscriptionExpiry[sendingTo][subscriptionId] = userSubscriptionExpiry[msg.sender][subscriptionId];
+    
+    emit SubTransferred(subscriptionId, msg.sender, sendingTo);
 }
 
 // Funktion för prenumeranter att kontrollera om de prenumererar på detta prenumerations-ID
@@ -206,15 +247,31 @@ function checkMySubscriptionStatus(uint256 subscriptionId) public view returns (
     if (subscriptionId >= nextSubscriptionId) {
         return "This subscription does not exist.";
     }
-    if (userSubscriptions[msg.sender][subscriptionId]) {
-        return "Yes, you are subscribed to this service.";
-    } else {
+    
+    Subscription storage subscription = subscriptions[subscriptionId];
+        if (subscription.status == SubscriptionStatus.Paused) {
+        return "This service is currently paused by the owner.";
+    }
+        if (subscription.endDate != 0 && block.timestamp > subscription.endDate) {
+        return "This service has ended.";
+    }
+        if (!userSubscriptions[msg.sender][subscriptionId]) {
         return "No, you do not have this subscription.";
     }
+    uint256 userExpiry = userSubscriptionExpiry[msg.sender][subscriptionId];
+    if (block.timestamp > userExpiry) {
+        return "Your subscription has expired. Please renew to continue access.";
+    }
+    
+    return "Yes, you have an active subscription to this service.";
 }
 
-// Funktion för prenumeranter att få sitt prenumerations slutdatum
-function getSubscriptionEndDate(uint256 subscriptionId) public view returns (uint256) {
-    return subscriptions[subscriptionId].endDate;
+
+// Funktion för prenumeranter att få sitt eget prenumerations slutdatum
+function getMySubscriptionEndDate(uint256 subscriptionId) public view returns (uint256) {
+    if (subscriptionId >= nextSubscriptionId) return 0;
+    if (!userSubscriptions[msg.sender][subscriptionId]) return 0;
+    
+    return userSubscriptionExpiry[msg.sender][subscriptionId];
 }
 }
