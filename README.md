@@ -9,6 +9,12 @@
 - *<b>Hantera sina prenumerationer som subscriber</b>* Du kan pausa, ge bort din prenumeration, och kolla status på när prenumerationen tar slut
 - *<b>Kontrollera prenumerationsägare som subscription owner</b>* Du kan ändra dina tjänster genom att ändra pris, samt pausa/aktivera prenumerationstjänsten
 
+## För att få kontraktets tester att fungera, kör dessa kommanon i terminalen:
+
+- *`npm install`*        <b># Installerar beroenden</b>
+-*`npx hardhat compile`*  <b># Kompilerar kontraktet</b>
+-*`npx hardhat test`*     <b># Kör testerna</b>
+
 ## Kontraktets Funktioner
 
 ### FUNKTIONER FÖR ÄGARE (Subscription Owners)

@@ -32,7 +32,7 @@ describe("Deployment", function() {
 
     it("Should not create a subscription if the cycle length is 0", async function () {
       const { smartSub, ownerAccount } = await deploySmartSubFixture();
-      await expect(smartSub.createSub("Netflix", ethers.parseEther("0.1"), 0, 0, 0))
+      await expect(smartSub.createSub("Netflix", ethers.parseEther("0.1"), 0, 0))
         .to.be.revertedWith("Cycle length must be greater than 0.");
     });
   });
@@ -43,7 +43,7 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
       // Skapa en prenumeration först
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       
       await expect(
         smartSub.connect(notOwner).manageSub(0, ethers.parseEther("0.2"), SubscriptionStatus.Active)
@@ -62,7 +62,7 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount } = await deploySmartSubFixture();
       
       // Skapa en prenumeration först
-      await smartSub.createSub("Spotify", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.createSub("Spotify", ethers.parseEther("0.1"), 86400, 0);
       
       // Pausa prenumerationen
       await smartSub.manageSub(0, ethers.parseEther("0.1"), SubscriptionStatus.Paused);
@@ -77,7 +77,7 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
       // Skapa en prenumeration först
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       
       await expect(smartSub.connect(notOwner).withdrawRevenue(0))
         .to.be.revertedWithCustomError(smartSub, "OnlySubOwnerError");
@@ -93,11 +93,11 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
       // Skapa prenumeration
-      await smartSub.connect(ownerAccount).createSub("Spotify", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Spotify", ethers.parseEther("0.1"), 86400, 0);
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
-      expect(await smartSub.balances(ownerAccount.address)).to.equal(ethers.parseEther("0.1"));
+      expect(await smartSub.subscriptionBalances(0)).to.equal(ethers.parseEther("0.1"));
       await smartSub.connect(ownerAccount).withdrawRevenue(0);
-      expect(await smartSub.balances(ownerAccount.address)).to.equal(0);
+      expect(await smartSub.subscriptionBalances(0)).to.equal(0);
     });
   });
 
@@ -106,19 +106,19 @@ describe("Deployment", function() {
     it("Should increase owner's balance when user subscribes", async function () {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       
-      expect(await smartSub.balances(ownerAccount.address)).to.equal(0);
+      expect(await smartSub.subscriptionBalances(0)).to.equal(0);
       
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
       
-      expect(await smartSub.balances(ownerAccount.address)).to.equal(ethers.parseEther("0.1"));
+      expect(await smartSub.subscriptionBalances(0)).to.equal(ethers.parseEther("0.1"));
     });
 
     it("Should revert if already subscribed", async function () {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
       
       await expect(smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") }))
@@ -128,7 +128,7 @@ describe("Deployment", function() {
     it("Should revert if fee argument does not match msg.value", async function () {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       
       await expect(smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.2") }))
         .to.be.revertedWith("The ETH amount sent must match the fee parameter.");
@@ -139,7 +139,7 @@ describe("Deployment", function() {
     it("Should set userSubscriptions mapping to false", async function () {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
       
       expect(await smartSub.userSubscriptions(notOwner.address, 0)).to.be.true;
@@ -162,7 +162,7 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       const [, , thirdUser] = await ethers.getSigners();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
       
       expect(await smartSub.userSubscriptions(notOwner.address, 0)).to.be.true;
@@ -176,7 +176,7 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       const [, , thirdUser] = await ethers.getSigners();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
       
       expect(await smartSub.userSubscriptions(thirdUser.address, 0)).to.be.false;
@@ -191,7 +191,7 @@ describe("Deployment", function() {
     it("Should return correct status message for existing subscription", async function () {
       const { smartSub, ownerAccount, notOwner } = await deploySmartSubFixture();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       
       const status = await smartSub.connect(notOwner).checkMySubscriptionStatus(0);
       expect(status).to.equal("No, you do not have this subscription.");
@@ -199,7 +199,7 @@ describe("Deployment", function() {
       await smartSub.connect(notOwner).subscribe(0, ethers.parseEther("0.1"), { value: ethers.parseEther("0.1") });
       
       const statusAfter = await smartSub.connect(notOwner).checkMySubscriptionStatus(0);
-      expect(statusAfter).to.equal("Yes, you are subscribed to this service.");
+      expect(statusAfter).to.equal("Yes, you have an active subscription to this service.");
     });
 
     it("Should return error message for non-existent subscription", async function () {
@@ -215,19 +215,21 @@ describe("Deployment", function() {
       const { smartSub, ownerAccount } = await deploySmartSubFixture();
       
       const endDate = Math.floor(Date.now() / 1000) + 86400; // 1 day from now
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, endDate, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, endDate);
       
-      const returnedEndDate = await smartSub.getSubscriptionEndDate(0);
-      expect(returnedEndDate).to.equal(endDate);
+      // Testa att få tjänstens slutdatum direkt från subscription struct
+      const subscription = await smartSub.subscriptions(0);
+      expect(subscription.endDate).to.equal(endDate);
     });
 
     it("Should return 0 for never-ending subscription", async function () {
       const { smartSub, ownerAccount } = await deploySmartSubFixture();
       
-      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0, 0);
+      await smartSub.connect(ownerAccount).createSub("Netflix", ethers.parseEther("0.1"), 86400, 0);
       
-      const endDate = await smartSub.getSubscriptionEndDate(0);
-      expect(endDate).to.equal(0);
+      // Testa att slutdatum är 0 för oändliga prenumerationer
+      const subscription = await smartSub.subscriptions(0);
+      expect(subscription.endDate).to.equal(0);
     });
   });
   
